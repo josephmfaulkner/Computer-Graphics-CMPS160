@@ -48,9 +48,6 @@ Make sure you select an image of a reasonable size or else the texture will not 
 As a firm believer in scrupulous testing and debugging, I have included lots of console logs
 most are commented out but kept in the code should they ever be needed again.
 
-IMPORTANT:
-"cuon-matrix.js" loads from the sibling directory 'lib' like so:
-  <script type="text/javascript" src="../lib/cuon-matrix.js"></script>
 
 I have tested the code and I know that it works on Google Chrome with the
 woman and enterprise model.
