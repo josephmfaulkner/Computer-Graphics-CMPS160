@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec2 vCoord;
+attribute vec4 vPosition;
+attribute vec3 aNormal;
+
+uniform mat4 uMatrix;
+uniform mat4 uTMatrix;
+uniform mat4 uWMatrix;
+uniform mat4 uPLightTMatrix;
+uniform mat4 uCamTMatrix;
+uniform vec3 uLightDirection;
+uniform vec3 uPointLightPosition;
+uniform vec4 uObjectColor;
+varying vec4 vObjectColor;
+varying vec4 fcolor;
+varying vec3 vNormal;
+varying vec3 vLightDirection;
+varying vec3 vSurfaceToPointLight;
+varying vec2 textCoord;
+void main()
+{
+	gl_Position = uMatrix * uWMatrix * uTMatrix* vPosition;
+	vNormal = mat3(uTMatrix) * aNormal;
+	vec3 surfaceWorldPosition = (uTMatrix * vPosition).xyz;
+	//vSurfaceToPointLight = uPointLightPosition - surfaceWorldPosition;
+	vSurfaceToPointLight = vec3(uPLightTMatrix * vec4(uPointLightPosition,1.0)) - vec3(0.0,0.0,0.0);
+	vSurfaceToPointLight = vec3(uPLightTMatrix * vec4(uPointLightPosition,1.0));
+	//vSurfaceToPointLight = surfaceWorldPosition;
+	vLightDirection = uLightDirection;
+  float vlight = dot(normalize(vNormal),normalize(uLightDirection));
+	float plight = dot(normalize(vNormal),normalize(vSurfaceToPointLight));
+	//float plight = dot(normalize(vNormal),normalize(uPointLightPosition));
+
+	fcolor = uObjectColor;
+	vObjectColor = uObjectColor;
+	//vec3 tLighting = (vec3(0.2,0.2,0.2) * vlight) + (vec3(1.0,0.0,0.95) * plight);
+	vec3 tLighting = (vec3(0.0,0.1,0.3) * plight) + (vec3(1.0,1.0,0.85) * vlight);
+	//vec3 tLighting = (vec3(1.0,1.0,1.0) * plight);
+	fcolor.rgb *= tLighting;
+	textCoord = vCoord;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+uniform vec4 uColor;
+uniform int renderLightCube;
+uniform int togglePhongShader;
+uniform int toggleObjectPicking;
+uniform int useTexture;
+uniform vec4 pickingColor;
+uniform sampler2D u_texture;
+varying vec4 fcolor;
+varying vec3 vNormal;
+varying vec4 vObjectColor;
+varying vec3 vLightDirection;
+varying vec3 vSurfaceToPointLight;
+varying vec2 textCoord;
+
+void main()
+{
+  int phong = togglePhongShader;
+  int picking = toggleObjectPicking;
+    if(picking > 0){
+		gl_FragColor = pickingColor;
+	}
+	else if(renderLightCube > 0){
+		gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+	}
+	else if(phong > 0) {
+		float light = dot(normalize(vNormal),normalize(vLightDirection));
+		float plight = dot(normalize(vNormal),normalize(vSurfaceToPointLight));
+		vec3 tLighting = (vec3(0.0,0.1,0.3) * plight) + (vec3(1.0,1.0,0.85) * light);
+		if(useTexture > 0){
+			gl_FragColor = texture2D(u_texture,textCoord);
+		} else{
+			gl_FragColor = vObjectColor;
+		}
+		gl_FragColor.rgb *= tLighting;
+	}
+	else{
+		//gl_FragColor = vec4(textCoord,1.0,1.0);
+		if(useTexture > 0){
+			gl_FragColor = texture2D(u_texture,textCoord);
+		} else {
+			gl_FragColor = fcolor;
+		}
+	}
+
+}
+</script>
+<script type="text/javascript" src="scripts/cuon-matrix.js"></script>
+<script type="text/javascript" src="scripts/variables.js"></script>
+<script type="text/javascript" src="scripts/gui-functions.js"></script>
+<script type="text/javascript" src="scripts/utility-functions.js"></script>
+<script type="text/javascript" src="scripts/handle-file-functions.js"></script>
+<script type="text/javascript" src="scripts/geometry-functions.js"></script>
+<script type="text/javascript" src="scripts/render-functions.js"></script>
+<script type="text/javascript" src="scripts/model.js"></script>
+<script type="text/javascript" src="scripts/main.js"></script>
+<style>
+.view{
+	position: absolute;
+	top: 0px;
+	left: 0px;
+}
+.controls {
+    position: absolute;
+    top: 0px;
+    left: 525px;
+    width: 420px;
+    border: 3px solid grey;
+    padding: 10px;
+		background-color: white;
+}
+#readMe {
+	margin-left: 20px;
+	width: 530px;
+}
+</style>
+<title>Program 4 -- jofaulkn@ucsc.edu</title>
+</head>
+<body>
+<div class="view">
+
+	<canvas id="gl-canvas" width="512" height="512">
+	Oops ... your browser doesn't support the HTML5 canvas element
+	</canvas>
+	<center>
+	<strong>Joseph Faulkner (josephmfaulkner@gmail.com)</strong>
+	</center>
+		<center>Works on Google Chrome. Tested with woman.coor and woman.poly</center>
+		<br><center>Default Red cube does nothing.</center>
+		<br> <p>
+		<small>
+			<div id="readMe">
+
+		</small>
+	</p>
+</div>
+
+<div class="controls">
+	Shader: <select name="shaderType" id="shaderSelect" onchange="changeShaderEvent(this)">
+    <option value="0">Flat</option>
+		<option value="1">Gourad</option>
+	  <option value="2">Phong</option>
+	  <option value="3">Wireframe</option>
+	</select>
+<br>
+
+<br>
+Perspective: <input type="checkbox" name="specular" value="perspectiveCheck" id="togglePerspective" onclick="togglePerspectiveEvent(this)">
+<br>
+<!--
+Specular Lighting:<input type="checkbox" name="specular" value="specLightCheck" id="toggleSpecular" checked onclick="toggleSpecularEvent(this)">
+<input type="range" name="points" min="0" max="20" value="5" id="adjustSpecular" onchange="adjustSpecularEvent(this)">
+-->
+Select Texture: <input type="file" id="selectTexture">
+ChangeColor:<br>
+<div id="displayChangeColorVal" style="height:25px;width:300px;border-style:solid;border-width:1px; "></div>
+R:<input type="range" name="points" min="0.0" max="255" value="255" id="adjustColorValR" onchange="adjustChangeColorVal()"><br>
+G:<input type="range" name="points" min="0.0" max="255" value="110" id="adjustColorValG" onchange="adjustChangeColorVal()"><br>
+B:<input type="range" name="points" min="0.0" max="255" value="0" id="adjustColorValB" onchange="adjustChangeColorVal()">
+<br>
+<strong>Load Object: </strong>Select <strong> 2 files</strong> at a time ( .corr, .poly):
+<input type="file" id="openFiles" name="files[]" accept=".coor,.poly" multiple>
+<h4 id="activeTool"></h4>
+<h4 id="activeObject" hidden></h4>
+<p><small><strong>Tools (leftClick):</strong> <br>
+To <strong>move </strong> the object, press <strong>Q</strong> <br>
+To <strong>rotate</strong> the object, press <strong>W</strong> <br>
+To <strong>scale</strong> the object, press <strong>E</strong> <br>
+To change the object's <strong>color</strong>, press <strong>R</strong> <br>
+To apply a <strong>texture</strong> to the object, press <strong>T</strong> <br><br>
+<strong>mouseWheel</strong> zooms the camera in and out</br>
+<strong>mouseWheel + clickBackground </strong> moves the camera forwards and backwards</br>
+<strong>mousewheel + clickObject</strong> moves the selected object in and out</br>
+<strong>leftClickBackground+ moveMouse</strong> pans the camera</br>
+<strong>rightClickBackground + moveMouse</strong> tilts the camera </br>
+.</small> </p>
+</div>
+
+<output id = "list"></output>
+
+
+
+</body>
+</html>
